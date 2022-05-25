@@ -2,6 +2,8 @@ use std::io::prelude::*;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::fs;
+use std::thread;
+use std::time::Duration;
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
@@ -11,7 +13,9 @@ fn main() {
         let stream = stream.unwrap();
         
         println!("Connection established!");
-        handle_connection(stream);
+        thread::spawn(|| {
+            handle_connection(stream);
+        });
     }
 }
 
@@ -23,8 +27,12 @@ fn handle_connection(mut stream: TcpStream) {
     println!("Request: {}", String::from_utf8_lossy(&buffer[..]));
 
     let get = b"GET / HTTP/1.1\r\n";
+    let sleep = b"GET /sleep HTTP/1.1\r\n";
 
     let (status_line, filename) = if buffer.starts_with(get) {
+        ("HTTP/1.1 200 OK", "templates/index.html")
+    } else if buffer.starts_with(sleep){
+        thread::sleep(Duration::from_secs(5));
         ("HTTP/1.1 200 OK", "templates/index.html")
     } else {
         ("HTTP/1.1 400 NOT FOUND", "templates/404.html")
